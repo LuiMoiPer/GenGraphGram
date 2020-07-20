@@ -5,17 +5,29 @@ class Generator:
 
     def __init__(self, rules):
         self._rules = rules
+        self._type_buckets = {}
+        # parse all the rules to populate the type buckets
+
+    def _get_useable_rules(self, graph):
+        # go through the lhs of the production rules and use that to determine if it can be applied
+        # for rule in self._rules
+        #   get how many of each type is needed for the rule
+        #   use the type bucket to see there enough of ech type to apply the rules
+        #   check connectivity stuff
+        # return a list of applicable rules
+        raise NotImplementedError
 
     def generate(self):
         """start with a start symbol and then apply production rules
         """
-        # make a graph
-        # add start symbol to the graph
-        # while production rules can be applied
-        #   get all rules that can be applied
-        #   pick a rule that can be applied at random
-        #   return the graph
-        pass
+        graph = nx.Graph(Node('Start'))
+        useable_rules = self._get_useable_rules(graph)
+        while len(useable_rules) > 0:
+            # pick one of the useable rules at random
+            # apply the rule
+            useable_rules = self._get_useable_rules(graph)
+        # return the graph
+        raise NotImplementedError
 
 class Rule:
     """Representation of a production rule to be used in the generator, might be better as a 
@@ -34,7 +46,7 @@ class Node:
     production rule.
     """
 
-    def __init__(self, type: str, data):
+    def __init__(self, type: str, data = None):
         self._type = type
         self._data = data
 
@@ -45,3 +57,10 @@ class Node:
     @property
     def data(self):
         return self._data
+    
+    @data.setter
+    def data(self, data):
+        self._data = data
+
+if __name__ == "__main__":
+    pass
