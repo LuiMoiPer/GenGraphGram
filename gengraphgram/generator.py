@@ -1,8 +1,8 @@
 import typing
 import networkx as nx
 
-class Generator:
 
+class Generator:
     def __init__(self, rules):
         self._rules = rules
         self._type_buckets = {}
@@ -20,7 +20,7 @@ class Generator:
     def generate(self):
         """start with a start symbol and then apply production rules
         """
-        graph = nx.Graph(Node('Start'))
+        graph = nx.Graph(Node("Start"))
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
             # pick one of the useable rules at random
@@ -28,6 +28,7 @@ class Generator:
             useable_rules = self._get_useable_rules(graph)
         # return the graph
         raise NotImplementedError
+
 
 class Rule:
     """Representation of a production rule to be used in the generator, might be better as a 
@@ -46,7 +47,7 @@ class Node:
     production rule.
     """
 
-    def __init__(self, type: str, data = None):
+    def __init__(self, type: str, data=None):
         self._type = type
         self._data = data
 
@@ -57,10 +58,11 @@ class Node:
     @property
     def data(self):
         return self._data
-    
+
     @data.setter
     def data(self, data):
         self._data = data
+
 
 if __name__ == "__main__":
     pass
