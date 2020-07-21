@@ -37,9 +37,26 @@ class Rule:
     it can be applied.
     """
 
-    def __init__(self, lhs: str, rhs: str):
-        self._lhs = lhs
-        self._rhs = rhs
+    """
+    start: rule
+    rule: lhs "==>" rhs ";"
+    lhs: item ("," item)*
+    rhs: product ("|" product)*
+    product: item ("," item)*
+    item: id ("->" id)*
+    id: WORD 
+        | WORD INT
+
+    %import common.INT
+    %import common.WORD
+    %import common.WS
+    %ignore WS
+    """
+
+    def __init__(self, rule: str):
+        # parse the string
+        # store left and right hand side
+        # store all the types used in this rule
 
 
 class Node:
