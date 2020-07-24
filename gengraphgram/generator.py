@@ -93,7 +93,9 @@ class Rule:
             raise ValueError
 
         products = []
-        raise NotImplementedError
+        for product in rhs.children:
+            products.append(self._process_product(product))
+        self._rhs = products
 
     def _process_product(self, product):
         "Given a product return a dict that stores the types used and the edges between nodes"
