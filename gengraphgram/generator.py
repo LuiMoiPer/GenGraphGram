@@ -1,5 +1,7 @@
 import typing
+
 import networkx as nx
+from lark import Lark
 
 
 class Generator:
@@ -37,26 +39,40 @@ class Rule:
     it can be applied.
     """
 
-    """
+    grammar = """
     start: rule
     rule: lhs "==>" rhs ";"
     lhs: item ("," item)*
     rhs: product ("|" product)*
     product: item ("," item)*
     item: id ("->" id)*
-    id: WORD 
-        | WORD INT
+    id: WORD [INT]
 
     %import common.INT
     %import common.WORD
     %import common.WS
     %ignore WS
     """
+    parser = Lark(grammar, lexer="auto", propagate_positions=True)
 
     def __init__(self, rule: str):
-        # parse the string
+        parse_tree = Rule.parser.parse(rule)
         # store left and right hand side
-        # store all the types used in this rule
+        self._process_lhs()
+        self._process_rhs()
+        raise NotImplementedError
+
+    def _process_lhs(self, parse_tree):
+        """From the lhs of the rule we want to store the labels used, types used, and adjacentcies
+        and store them
+        """
+        raise NotImplementedError
+
+    def _process_rhs(self, parse_tree):
+        """From the rhs of the rule we want to store the each possible transfromstions and their 
+        labels used, types used, and adjacentcies and store them
+        """
+        raise NotImplementedError
 
 
 class Node:
