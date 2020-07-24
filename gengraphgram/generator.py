@@ -1,5 +1,6 @@
 import typing
 from collections import defaultdict
+import random
 
 import networkx as nx
 from lark import Lark
@@ -138,6 +139,23 @@ class Rule:
         elif len(ident.children) == 2:
             return ident.children[0].value, ident.children[1].value
 
+    @property
+    def lhs(self):
+        return self._lhs
+
+    @property
+    def rhs(self):
+        return self._rhs
+
+    @property
+    def required_types(self):
+        return self._lhs["types"]
+
+    def get_random_product(self):
+        if len(self._rhs) == 1:
+            return self._rhs[0]
+        else:
+            return random.choice(self._rhs)
 
 class Node:
     """Represents a node in the graph and has a type to help determine if they can be used in a 
