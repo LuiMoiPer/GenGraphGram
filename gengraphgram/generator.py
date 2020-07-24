@@ -1,4 +1,5 @@
 import typing
+from collections import defaultdict
 
 import networkx as nx
 from lark import Lark
@@ -42,10 +43,10 @@ class Rule:
     grammar = """
     start: rule
     rule: lhs "==>" rhs ";"
-    lhs: item ("," item)*
+    lhs: path ("," path)*
     rhs: product ("|" product)*
-    product: item ("," item)*
-    item: id ("->" id)*
+    product: path ("," path)*
+    path: id ("->" id)*
     id: WORD [INT]
 
     %import common.INT
@@ -63,9 +64,16 @@ class Rule:
         raise NotImplementedError
 
     def _process_lhs(self, parse_tree):
-        """From the lhs of the rule we want to store the labels used, types used, and adjacentcies
-        and store them
+        """From the lhs of the rule we want to store the labels used, types used, and adjacency 
+        list and store them
         """
+        if parse_tree.data not == "LHS":
+            raise ValueError
+
+        types = defaultdict(0)
+        edges = defaultdict([])
+
+        self._lhs = {"types" : types, "edges" : edges}
         raise NotImplementedError
 
     def _process_rhs(self, parse_tree):
@@ -73,6 +81,19 @@ class Rule:
         labels used, types used, and adjacentcies and store them
         """
         raise NotImplementedError
+
+    def _process_path(self, parse_tree):
+        """From a path get back return a adjacency dict of all the nodes used and types
+        """
+        if parse_tree.data not == "path":
+            raise ValueError
+
+        types = defaultdict(0)
+        edges = defaultdict([])
+
+        for i in range(len(parse_tree.childen) - 1):
+            # add an edge from parse_tree.childern[i] to parse_tree.children[i + 1]
+            pass
 
 
 class Node:
