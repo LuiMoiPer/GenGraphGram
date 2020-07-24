@@ -43,7 +43,7 @@ class Rule:
     grammar = """
     start: rule
     rule: lhs "==>" rhs ";"
-    lhs: path ("," path)*
+    lhs: product
     rhs: product ("|" product)*
     product: path ("," path)*
     path: id ("->" id)*
@@ -61,7 +61,6 @@ class Rule:
         # store left and right hand side
         self._process_lhs(parse_tree.children[0])
         self._process_rhs(parse_tree.children[1])
-        raise NotImplementedError
 
     def _process_lhs(self, lhs):
         """From the lhs of the rule we want to store the types used, and adjacency list and 
@@ -70,20 +69,7 @@ class Rule:
         if lhs.data != "lhs":
             raise ValueError
 
-        types = defaultdict(lambda: 0)
-        edges = defaultdict(lambda: set())
-
-        # get info from path and add it to the dicts
-        for path in lhs.children:
-            path_types, path_edges = self._process_path(path)
-            # add path types
-            for typ, count in path_types.items():
-                types[typ] += count
-            # add path edges
-            for source, neighbors in path_edges.items():
-                edges[source] = edges[source].union(neighbors)
-
-        self._lhs = {"types": types, "edges": edges}
+        self._lhs = self._process_product(lhs.children[0])
 
     def _process_rhs(self, rhs):
         """From the rhs of the rule we want to store the each possible transfromstions and their 
