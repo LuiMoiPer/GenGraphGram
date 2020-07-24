@@ -83,8 +83,7 @@ class Rule:
             for source, neighbors in path_edges.items():
                 edges[source] = edges[source].union(neighbors)
 
-        self._lhs = {"types" : types, "edges" : edges}
-        raise NotImplementedError
+        self._lhs = {"types": types, "edges": edges}
 
     def _process_rhs(self, parse_tree):
         """From the rhs of the rule we want to store the each possible transfromstions and their 
@@ -108,7 +107,7 @@ class Rule:
             edges[source[0]].add(dest[0])
             # add to type counts
             types[source[0]] += 1
-            
+
         # add the last one that got missed by the loop
         source = self._process_id(path.children[-1])
         types[source[0]] += 1
