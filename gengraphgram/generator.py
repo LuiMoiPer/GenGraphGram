@@ -64,8 +64,8 @@ class Rule:
         raise NotImplementedError
 
     def _process_lhs(self, lhs):
-        """From the lhs of the rule we want to store the labels used, types used, and adjacency 
-        list and store them
+        """From the lhs of the rule we want to store the types used, and adjacency list and 
+        store them
         """
         if lhs.data != "lhs":
             raise ValueError
@@ -85,11 +85,35 @@ class Rule:
 
         self._lhs = {"types": types, "edges": edges}
 
-    def _process_rhs(self, parse_tree):
+    def _process_rhs(self, rhs):
         """From the rhs of the rule we want to store the each possible transfromstions and their 
-        labels used, types used, and adjacentcies and store them
+        types used, and adjacentcies and store them
         """
+        if rhs.data != "rhs":
+            raise ValueError
+
+        products = []
         raise NotImplementedError
+
+    def _process_product(self, product):
+        "Given a product return a dict that stores the types used and the edges between nodes"
+        if product.data != "product":
+            raise ValueError
+
+        types = defaultdict(lambda: 0)
+        edges = defaultdict(lambda: set())
+
+        # get info from path and add it to the dicts
+        for path in product.children:
+            path_types, path_edges = self._process_path(path)
+            # add path types together
+            for typ, count in path_types.items():
+                types[typ] += count
+            # add path edges
+            for source, neighbors in path_edges.items():
+                edges[source] = edges[source].union(neighbors)
+
+        return {"types": types, "edges": edges}
 
     def _process_path(self, path):
         """From a path get back return a adjacency dict of all the nodes used and types
