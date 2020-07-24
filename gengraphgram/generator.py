@@ -57,21 +57,31 @@ class Rule:
     parser = Lark(grammar, lexer="auto", propagate_positions=True)
 
     def __init__(self, rule: str):
-        parse_tree = Rule.parser.parse(rule)
+        parse_tree = Rule.parser.parse(rule).children[0]
         # store left and right hand side
-        self._process_lhs()
-        self._process_rhs()
+        self._process_lhs(parse_tree.children[0])
+        self._process_rhs(parse_tree.children[1])
         raise NotImplementedError
 
-    def _process_lhs(self, parse_tree):
+    def _process_lhs(self, lhs):
         """From the lhs of the rule we want to store the labels used, types used, and adjacency 
         list and store them
         """
-        if parse_tree.data not == "LHS":
+        if lhs.data != "lhs":
             raise ValueError
 
-        types = defaultdict(0)
-        edges = defaultdict([])
+        types = defaultdict(lambda: 0)
+        edges = defaultdict(lambda: set())
+
+        # get info from path and add it to the dicts
+        for path in lhs.children:
+            path_types, path_edges = self._process_path(path)
+            # add path types
+            for typ, count in path_types.items():
+                types[typ] += count
+            # add path edges
+            for source, neighbors in path_edges.items():
+                edges[source] = edges[source].union(neighbors)
 
         self._lhs = {"types" : types, "edges" : edges}
         raise NotImplementedError
@@ -82,18 +92,40 @@ class Rule:
         """
         raise NotImplementedError
 
-    def _process_path(self, parse_tree):
+    def _process_path(self, path):
         """From a path get back return a adjacency dict of all the nodes used and types
         """
-        if parse_tree.data not == "path":
+        if path.data != "path":
             raise ValueError
 
-        types = defaultdict(0)
-        edges = defaultdict([])
+        types = defaultdict(lambda: 0)
+        edges = defaultdict(lambda: set())
 
-        for i in range(len(parse_tree.childen) - 1):
-            # add an edge from parse_tree.childern[i] to parse_tree.children[i + 1]
-            pass
+        for i in range(len(path.children) - 1):
+            # add an edge from parse_tree.children[i] to parse_tree.children[i + 1]
+            source = self._process_id(path.children[i])
+            dest = self._process_id(path.children[i + 1])
+            edges[source[0]].add(dest[0])
+            # add to type counts
+            types[source[0]] += 1
+            
+        # add the last one that got missed by the loop
+        source = self._process_id(path.children[-1])
+        types[source[0]] += 1
+        return types, edges
+
+    def _process_id(self, ident):
+        """Takes in a id tree and returns a tuple that stores the type of the id in the first
+        position and the label in the second position.  If there is no label then None is stored
+        in the second position.
+        """
+        if ident.data != "id":
+            raise ValueError
+
+        if len(ident.children) == 1:
+            return ident.children[0].value, None
+        elif len(ident.children) == 2:
+            return ident.children[0].value, ident.children[1].value
 
 
 class Node:
