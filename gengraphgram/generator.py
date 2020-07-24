@@ -157,6 +157,7 @@ class Rule:
         else:
             return random.choice(self._rhs)
 
+
 class Node:
     """Represents a node in the graph and has a type to help determine if they can be used in a 
     production rule.
