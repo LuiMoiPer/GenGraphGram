@@ -1,4 +1,4 @@
-from typing import List, Type
+from typing import List, Type, DefaultDict
 from collections import defaultdict
 import random
 
@@ -19,12 +19,32 @@ class Generator:
         # go through the lhs of the production rules and use that to determine if it can be applied
         useable_rules = []
         for rule in self._rules:
-            # use the type bucket to see there enough of each type to apply the rules
-            for typ, count in rule.required_types.items():
-                if self._type_buckets[typ] < count:
-                    continue
-            # check connectivity stuff
+            # check if there are enough node of each type
+            if not self._has_required_types(rule, self._type_buckets):
+                continue
+            # check if there is the required conectivity
+            if not self._has_required_connections(rule, graph):
+                continue
+            # check other meta stuff
+            useable_rules.append(rule)
+        raise NotImplementedError
         return useable_rules
+
+    def _has_required_types(self, rule: "Rule", type_buckets: "DefaultDict") -> bool:
+        # use the type bucket to see there enough of each type to apply the rules
+        for typ, count in rule.required_types.items():
+            if type_buckets[typ] < count:
+                return False
+        return True
+
+    def _has_required_connections(self, rule: "Rule", graph) -> bool:
+        # get all the edges needed for the rule
+        # check each connection
+        #   if missing connection return false
+        raise NotImplementedError
+        return true
+
+    def _apply_rule(self, rule: "Rule", graph):
         raise NotImplementedError
 
     def generate(self):
@@ -34,11 +54,13 @@ class Generator:
         graph = nx.Graph(Node("start"))
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
-            # pick one of the useable rules at random
-            # apply the rule
+            # pick one of the useable rules at random and apply it
+            self._apply_rule(random.choice(useable_rules), graph)
+            # update the usable rules
             useable_rules = self._get_useable_rules(graph)
-        # return the graph
         raise NotImplementedError
+        # return the graph
+        return graph
 
 
 class Rule:
@@ -70,7 +92,7 @@ class Rule:
         self._process_lhs(parse_tree.children[0])
         self._process_rhs(parse_tree.children[1])
 
-    def _process_lhs(self, lhs):       
+    def _process_lhs(self, lhs):
         """From the lhs of the rule we want to store the types used, and adjacency list and 
         store them
         """
