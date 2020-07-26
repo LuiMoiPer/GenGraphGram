@@ -1,4 +1,4 @@
-import typing
+from typing import List, Type
 from collections import defaultdict
 import random
 
@@ -7,24 +7,31 @@ from lark import Lark
 
 
 class Generator:
-    def __init__(self, rules):
+    def __init__(self, rules: List["Rule"]) -> "Generator":
+        # make sure every item is a rule
+        if any(not isinstance(rule, Rule) for rule in rules):
+            raise ValueError
         self._rules = rules
-        self._type_buckets = {}
+        self._type_buckets = defaultdict(lambda: 0)
         # parse all the rules to populate the type buckets
 
-    def _get_useable_rules(self, graph):
+    def _get_useable_rules(self, graph) -> List["Rule"]:
         # go through the lhs of the production rules and use that to determine if it can be applied
-        # for rule in self._rules
-        #   get how many of each type is needed for the rule
-        #   use the type bucket to see there enough of ech type to apply the rules
-        #   check connectivity stuff
-        # return a list of applicable rules
+        useable_rules = []
+        for rule in self._rules:
+            # use the type bucket to see there enough of each type to apply the rules
+            for typ, count in rule.required_types.items():
+                if self._type_buckets[typ] < count:
+                    continue
+            # check connectivity stuff
+        return useable_rules
         raise NotImplementedError
 
     def generate(self):
-        """start with a start symbol and then apply production rules
+        """start with a start symbol and then apply production rules until some condition is hit, 
+        at the moment we just continue until we cant apply rules anymore.
         """
-        graph = nx.Graph(Node("Start"))
+        graph = nx.Graph(Node("start"))
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
             # pick one of the useable rules at random
@@ -63,7 +70,7 @@ class Rule:
         self._process_lhs(parse_tree.children[0])
         self._process_rhs(parse_tree.children[1])
 
-    def _process_lhs(self, lhs):
+    def _process_lhs(self, lhs):       
         """From the lhs of the rule we want to store the types used, and adjacency list and 
         store them
         """
