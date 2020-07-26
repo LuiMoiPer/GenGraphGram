@@ -12,8 +12,16 @@ class Generator:
         if any(not isinstance(rule, Rule) for rule in rules):
             raise ValueError
         self._rules = rules
-        self._type_buckets = defaultdict(lambda: 0)
+        self._type_buckets = defaultdict(lambda: set())
         # parse all the rules to populate the type buckets
+
+    def _add_to_type_buckets(self, node: "Node"):
+        # get the node type and add the node to the bucket of its type
+        self._type_buckets[node.typ].add(node)
+
+    def _remove_from_type_buckets(self, node: "Node"):
+        # get the node type and discard it from the bucket of its type
+        self._type_buckets[node.typ].discard(node)
 
     def _get_useable_rules(self, graph) -> List["Rule"]:
         # go through the lhs of the production rules and use that to determine if it can be applied
@@ -33,7 +41,7 @@ class Generator:
     def _has_required_types(self, rule: "Rule", type_buckets: "DefaultDict") -> bool:
         # use the type bucket to see there enough of each type to apply the rules
         for typ, count in rule.required_types.items():
-            if type_buckets[typ] < count:
+            if len(type_buckets[typ]) < count:
                 return False
         return True
 
@@ -51,7 +59,12 @@ class Generator:
         """start with a start symbol and then apply production rules until some condition is hit, 
         at the moment we just continue until we cant apply rules anymore.
         """
-        graph = nx.Graph(Node("start"))
+        
+        graph = nx.Graph()
+        # make the graph thats in the first rule 
+        # add the graph nodes to the type buckets
+        # add graph nodes and edges to the graph       
+
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
             # pick one of the useable rules at random and apply it
