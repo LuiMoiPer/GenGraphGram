@@ -1,6 +1,7 @@
 from typing import List, Type, DefaultDict
 from collections import defaultdict
 import random
+import copy
 
 import networkx as nx
 from lark import Lark
@@ -47,9 +48,20 @@ class Generator:
 
     def _has_required_connections(self, rule: "Rule", graph) -> bool:
         # get all the edges needed for the rule
-        # check each connection
-        #   if missing connection return false
+        adj_list = rule.lhs["edges"]
+        # make some type buckets
+        unchecked_nodes = defaultdict(lambda: set())
+        for key in self._type_buckets.keys:
+            unchecked_nodes[key] = copy.copy(self._type_buckets[key])
+
+        # check if we can satify all edges
+        #   set all the connections to be unsatisfied
+        #   grab a node of the type that isnt satified from unchecked node
+        #   see if we can satisfy all the connections with this node fixed
+        #   if any type bucket is empty then we dont have the required connections
+        #     return false
         raise NotImplementedError
+        # Do we wnat to cache/return the subgraph we found?
         return true
 
     def _apply_rule(self, rule: "Rule", graph):
@@ -61,9 +73,12 @@ class Generator:
         """
         
         graph = nx.Graph()
-        # make the graph thats in the first rule 
+        # make the graph thats in the first rule
+        start = Node("start")
         # add the graph nodes to the type buckets
-        # add graph nodes and edges to the graph       
+        self._type_buckets["start"].add(Node)
+        # add graph nodes and edges to the graph
+        graph.add_node(start)
 
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
