@@ -3,7 +3,9 @@ from collections import defaultdict
 import random
 import copy
 
-import networkx as nx
+import matplotlib.pyplot as plt
+from networkx import Graph, draw
+from networkx.algorithms.isomorphism import GraphMatcher
 from lark import Lark
 
 
@@ -36,7 +38,6 @@ class Generator:
                 continue
             # check other meta stuff
             useable_rules.append(rule)
-        raise NotImplementedError
         return useable_rules
 
     def _has_required_types(self, rule: "Rule", type_buckets: "DefaultDict") -> bool:
@@ -47,22 +48,10 @@ class Generator:
         return True
 
     def _has_required_connections(self, rule: "Rule", graph) -> bool:
-        # get all the edges needed for the rule
-        adj_list = rule.lhs["edges"]
-        # make some type buckets
-        unchecked_nodes = defaultdict(lambda: set())
-        for key in self._type_buckets.keys:
-            unchecked_nodes[key] = copy.copy(self._type_buckets[key])
-
-        # check if we can satify all edges
-        #   set all the connections to be unsatisfied
-        #   grab a node of the type that isnt satified from unchecked node
-        #   see if we can satisfy all the connections with this node fixed
-        #   if any type bucket is empty then we dont have the required connections
-        #     return false
-        raise NotImplementedError
-        # Do we wnat to cache/return the subgraph we found?
-        return true
+        # check if the lhs of the rule is a subgraph of our current graph
+        node_matcher = lambda node1, node2: node1["type"] == node2["type"]
+        matcher = GraphMatcher(graph, rule.lhs["graph"], node_matcher)
+        return matcher.subgraph_is_isomorphic()
 
     def _apply_rule(self, rule: "Rule", graph):
         raise NotImplementedError
@@ -72,13 +61,9 @@ class Generator:
         at the moment we just continue until we cant apply rules anymore.
         """
         
-        graph = nx.Graph()
+        graph = Graph()
         # make the graph thats in the first rule
-        start = Node("start")
-        # add the graph nodes to the type buckets
-        self._type_buckets["start"].add(Node)
-        # add graph nodes and edges to the graph
-        graph.add_node(start)
+        graph.add_node('start', type='start')
 
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
@@ -148,10 +133,11 @@ class Rule:
 
         types = defaultdict(lambda: 0)
         edges = defaultdict(lambda: set())
+        graph = Graph()
 
         # get info from path and add it to the dicts
         for path in product.children:
-            path_types, path_edges = self._process_path(path)
+            path_types, path_edges = self._process_path(path, graph)
             # add path types together
             for typ, count in path_types.items():
                 types[typ] += count
@@ -159,9 +145,15 @@ class Rule:
             for source, neighbors in path_edges.items():
                 edges[source] = edges[source].union(neighbors)
 
-        return {"types": types, "edges": edges}
+        # make a networkx representation of the product
+        draw(graph, with_labels=True)
+        from time import time
+        plt.savefig(f"{time()}.png")
+        plt.close()
 
-    def _process_path(self, path):
+        return {"types": types, "edges": edges, "graph": graph}
+
+    def _process_path(self, path, graph: "Graph"):
         """From a path get back return a adjacency dict of all the nodes used and types
         """
         if path.data != "path":
@@ -172,29 +164,35 @@ class Rule:
 
         for i in range(len(path.children) - 1):
             # add an edge from parse_tree.children[i] to parse_tree.children[i + 1]
-            source = self._process_id(path.children[i])
-            dest = self._process_id(path.children[i + 1])
-            edges[source[0]].add(dest[0])
+            source = self._process_id(path.children[i], graph)
+            dest = self._process_id(path.children[i + 1], graph)
+            edges[source[1]].add(dest[1])
+            # add edge to graph
+            graph.add_edge(source[1], dest[1])
             # add to type counts
             types[source[0]] += 1
 
         # add the last one that got missed by the loop
-        source = self._process_id(path.children[-1])
+        source = self._process_id(path.children[-1], graph)
         types[source[0]] += 1
         return types, edges
 
-    def _process_id(self, ident):
+    def _process_id(self, ident, graph: "Graph"):
         """Takes in a id tree and returns a tuple that stores the type of the id in the first
         position and the label in the second position.  If there is no label then None is stored
         in the second position.
         """
         if ident.data != "id":
             raise ValueError
-
         if len(ident.children) == 1:
-            return ident.children[0].value, None
+            typ = ident.children[0].value
+            name = ident.children[0].value
         elif len(ident.children) == 2:
-            return ident.children[0].value, ident.children[1].value
+            typ = ident.children[0].value
+            name = ident.children[0].value + ident.children[1].value
+        # add the id to the graph
+        graph.add_node(name, type=typ)
+        return typ, name
 
     @property
     def lhs(self):
@@ -213,28 +211,6 @@ class Rule:
             return self._rhs[0]
         else:
             return random.choice(self._rhs)
-
-
-class Node:
-    """Represents a node in the graph and has a type to help determine if they can be used in a 
-    production rule.
-    """
-
-    def __init__(self, type: str, data=None):
-        self._type = type
-        self._data = data
-
-    @property
-    def typ(self):
-        return self._type
-
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, data):
-        self._data = data
 
 
 if __name__ == "__main__":
