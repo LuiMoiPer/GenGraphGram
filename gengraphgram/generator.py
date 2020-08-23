@@ -60,10 +60,10 @@ class Generator:
         """start with a start symbol and then apply production rules until some condition is hit, 
         at the moment we just continue until we cant apply rules anymore.
         """
-        
+
         graph = Graph()
         # make the graph thats in the first rule
-        graph.add_node('start', type='start')
+        graph.add_node("start", type="start")
 
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
@@ -97,6 +97,7 @@ class Rule:
     %import common.WS
     %ignore WS
     """
+
     parser = Lark(grammar, lexer="auto", propagate_positions=True)
 
     def __init__(self, rule: str):
@@ -109,13 +110,16 @@ class Rule:
         """From the lhs of the rule we want to store the types used, and adjacency list and 
         store them
         """
+
         if lhs.data != "lhs":
             raise ValueError
 
-        self._lhs = self._process_product(lhs.children[0])
+        # get the networkx representation of the left hand side
+        graph = self._process_product(lhs.children[0])
+        self._lhs = graph
 
     def _process_rhs(self, rhs):
-        """From the rhs of the rule we want to store the each possible transfromstions and their 
+        """From the rhs of the rule we want to store each possible transfromstions and their 
         types used, and adjacentcies and store them
         """
         if rhs.data != "rhs":
@@ -127,72 +131,64 @@ class Rule:
         self._rhs = products
 
     def _process_product(self, product):
-        "Given a product return a dict that stores the types used and the edges between nodes"
+        "Given a product return a networkx graph that represents the product"
         if product.data != "product":
             raise ValueError
 
-        types = defaultdict(lambda: 0)
-        edges = defaultdict(lambda: set())
-        graph = Graph()
+        graph = Graph(types=set(), type_counts=defaultdict(int))
 
-        # get info from path and add it to the dicts
+        # process ids and edges, and update types, and type_counts for each path
         for path in product.children:
-            path_types, path_edges = self._process_path(path, graph)
-            # add path types together
-            for typ, count in path_types.items():
-                types[typ] += count
-            # add path edges
-            for source, neighbors in path_edges.items():
-                edges[source] = edges[source].union(neighbors)
+            self._process_path(path, graph)
 
         # make a networkx representation of the product
-        draw(graph, with_labels=True)
-        from time import time
-        plt.savefig(f"{time()}.png")
-        plt.close()
+        # draw(graph, with_labels=True)
+        # from time import time
+        # plt.savefig(f"{time()}.png")
+        # plt.close()
 
-        return {"types": types, "edges": edges, "graph": graph}
+        return graph
 
-    def _process_path(self, path, graph: "Graph"):
-        """From a path get back return a adjacency dict of all the nodes used and types
+    def _process_path(self, path, graph):
+        """From a path add the edges between nodes to the graph
         """
         if path.data != "path":
             raise ValueError
 
-        types = defaultdict(lambda: 0)
-        edges = defaultdict(lambda: set())
+        if len(path.children) == 1:
+            # there are no edges in this path so we just need to process the id
+            self._process_id(path.children[0], graph)
+        else:
+            for i in range(len(path.children) - 1):
+                # add an edge from parse_tree.children[i] to parse_tree.children[i + 1]
+                source = self._process_id(path.children[i], graph)
+                dest = self._process_id(path.children[i + 1], graph)
+                # add edge to graph
+                graph.add_edge(source, dest)
 
-        for i in range(len(path.children) - 1):
-            # add an edge from parse_tree.children[i] to parse_tree.children[i + 1]
-            source = self._process_id(path.children[i], graph)
-            dest = self._process_id(path.children[i + 1], graph)
-            edges[source[1]].add(dest[1])
-            # add edge to graph
-            graph.add_edge(source[1], dest[1])
-            # add to type counts
-            types[source[0]] += 1
-
-        # add the last one that got missed by the loop
-        source = self._process_id(path.children[-1], graph)
-        types[source[0]] += 1
-        return types, edges
-
-    def _process_id(self, ident, graph: "Graph"):
-        """Takes in a id tree and returns a tuple that stores the type of the id in the first
-        position and the label in the second position.  If there is no label then None is stored
-        in the second position.
+    def _process_id(self, ident, graph):
+        """Takes in a id tree and adds the id as a npde in the graph.  Also upates the type counts 
+        dict of the graph.  Returns the name of the node.
         """
         if ident.data != "id":
             raise ValueError
+
+        # get the type and add it to types and increase type_counts
+        typ = ident.children[0].value
+
+        # make the name
         if len(ident.children) == 1:
-            typ = ident.children[0].value
-            name = ident.children[0].value
+            name = typ
         elif len(ident.children) == 2:
-            typ = ident.children[0].value
-            name = ident.children[0].value + ident.children[1].value
-        # add the id to the graph
-        graph.add_node(name, type=typ)
-        return typ, name
+            name = typ + ident.children[1].value
+
+        if name not in graph:
+            # add the node to the graph and update type info
+            graph.add_node(name, type=typ)
+            graph.graph["types"].add(typ)
+            graph.graph["type_counts"][typ] += 1
+
+        return name
 
     @property
     def lhs(self):
