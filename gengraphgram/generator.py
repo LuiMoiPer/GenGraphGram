@@ -1,4 +1,4 @@
-from typing import List, Type, DefaultDict
+from typing import List, Type, DefaultDict, Set
 from collections import defaultdict
 import random
 import copy
@@ -26,12 +26,15 @@ class Generator:
         # get the node type and discard it from the bucket of its type
         self._type_buckets[node.typ].discard(node)
 
-    def _get_useable_rules(self, graph) -> List["Rule"]:
+    def _get_useable_rules(self, graph: "Graph") -> List["Rule"]:
         # go through the lhs of the production rules and use that to determine if it can be applied
         useable_rules = []
         for rule in self._rules:
-            # check if there are enough node of each type
-            if not self._has_required_types(rule, self._type_buckets):
+            # check if there are nodes of each type needed
+            if not self._has_required_types(rule, graph.graph["types"]):
+                continue
+            # check if there are enough of each node type
+            if not self._has_required_type_counts(rule, graph.graph["type_counts"]):
                 continue
             # check if there is the required conectivity
             if not self._has_required_connections(rule, graph):
@@ -40,30 +43,64 @@ class Generator:
             useable_rules.append(rule)
         return useable_rules
 
-    def _has_required_types(self, rule: "Rule", type_buckets: "DefaultDict") -> bool:
-        # use the type bucket to see there enough of each type to apply the rules
-        for typ, count in rule.required_types.items():
-            if len(type_buckets[typ]) < count:
+    def _has_required_types(self, rule: "Rule", types: "Set") -> bool:
+        # check if all elements in the lhs of the rule are in types
+        return rule.lhs.graph["types"] <= types
+
+    def _has_required_type_counts(
+        self, rule: "Rule", type_counts: "DefaultDict"
+    ) -> bool:
+        # make sure there are enough of each node type in type_counts
+        for typ, count in rule.required_type_counts.items():
+            if type_counts[typ] < count:
                 return False
+        # there are enough of each node
         return True
 
-    def _has_required_connections(self, rule: "Rule", graph) -> bool:
+    def _has_required_connections(self, rule: "Rule", graph: "Graph") -> bool:
         # check if the lhs of the rule is a subgraph of our current graph
         node_matcher = lambda node1, node2: node1["type"] == node2["type"]
-        matcher = GraphMatcher(graph, rule.lhs["graph"], node_matcher)
+        matcher = GraphMatcher(graph, rule.lhs, node_matcher)
         return matcher.subgraph_is_isomorphic()
 
-    def _apply_rule(self, rule: "Rule", graph):
+    def _make_starting_graph(self) -> "Graph":
+        # make the graph
+        graph = copy.deepcopy(self._rules[0].lhs)
+        return graph
+
+    def _apply_rule(self, rule: "Rule", graph: "Graph") -> None:
+        # apply rule
+        #   find where we're applying the rule
+        #   do the node replacement
+        #   figure out how to reconnect any dangling edges
+
+        # update type info
+        self._update_type_info(graph)
         raise NotImplementedError
 
-    def generate(self):
+    def _update_type_info(self, graph: "Graph") -> None:
+        # get current type info
+        types = set()
+        type_counts = defaultdict(int)
+        for node_data in graph.nodes.values():
+            typ = node_data["type"]
+            types.add(typ)
+            type_counts[typ] += 1
+        # update type info
+        graph.graph["types"] = types
+        graph.graph["type_counts"] = type_counts
+
+    @property
+    def rules(self):
+        return self._rules
+
+    def generate(self) -> "Graph":
         """start with a start symbol and then apply production rules until some condition is hit, 
         at the moment we just continue until we cant apply rules anymore.
         """
 
-        graph = Graph()
-        # make the graph thats in the first rule
-        graph.add_node("start", type="start")
+        # make a graph like the first rule made when the gen was inited
+        graph = self._make_starting_graph()
 
         useable_rules = self._get_useable_rules(graph)
         while len(useable_rules) > 0:
@@ -199,8 +236,12 @@ class Rule:
         return self._rhs
 
     @property
-    def required_types(self):
-        return self._lhs["types"]
+    def required_types(self) -> "Set":
+        return self._lhs.graph["types"]
+
+    @property
+    def required_type_counts(self) -> "DefaultDict":
+        return self._lhs.graph["type_counts"]
 
     def get_random_product(self):
         if len(self._rhs) == 1:
